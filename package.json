@@ -12,13 +12,17 @@
     "seed:testimonials": "node seedTestimonials.js",
     "seed:faqs": "node seedFaqs.js",
     "seed:team": "node seedTeam.js",
-    "seed:all": "node seed.js && node seedServices.js && node seedTestimonials.js && node seedFaqs.js && node seedTeam.js"
+    "seed:freelance": "node seedFreelance.js",
+    "seed:jobs": "node seedJobs.js",
+    "seed:all": "node seed.js && node seedServices.js && node seedTestimonials.js && node seedFaqs.js && node seedTeam.js && node seedFreelance.js && node seedJobs.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1116.0",
+    "@aws-sdk/s3-request-presigner": "^3.1116.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

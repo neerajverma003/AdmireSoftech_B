@@ -117,9 +117,9 @@ export const login = async (req, res) => {
 export const refreshToken = async (req, res) => {
   try {
     const token =
-      req.cookies?.refreshToken ||
       req.body?.refreshToken ||
-      req.headers["x-refresh-token"];
+      req.headers["x-refresh-token"] ||
+      req.cookies?.refreshToken;
 
     if (!token) {
       return res.status(401).json({ message: "Refresh token is missing" });
