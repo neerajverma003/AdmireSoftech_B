@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Inquiry } from "../models/inquiry.model.js";
+import { sendContactEmails } from "../services/emailService.js";
 
 // Helper to extract user ID if authenticated
 const getOptionalUserId = (req) => {
@@ -61,6 +62,11 @@ export const createInquiry = async (req, res) => {
       priority: priority || "Medium",
       notes: notes || "",
     });
+
+    // Send confirmation email to user & notification to configured admin + universal recipients
+    sendContactEmails({ inquiry: newInquiry }).catch((err) =>
+      console.error("[Inquiry Controller] Email notification error:", err.message)
+    );
 
     return res.status(201).json({
       success: true,

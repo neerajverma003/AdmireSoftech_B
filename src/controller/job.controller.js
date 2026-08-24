@@ -1,6 +1,7 @@
 import { Job } from "../models/job.model.js";
 import { Applicant } from "../models/applicant.model.js";
 import { generateGetSignedUrl } from "../utils/s3Utils.js";
+import { sendJobApplicationEmails } from "../services/emailService.js";
 
 
 export const getAllJobs = async (req, res) => {
@@ -317,6 +318,11 @@ export const submitJobApplication = async (req, res) => {
 
     
     await Job.findByIdAndUpdate(job._id, { $inc: { applicantsCount: 1 } });
+
+    // Send confirmation to applicant & notification to configured admin + universal recipients
+    sendJobApplicationEmails({ job, applicant }).catch((err) =>
+      console.error("[Job Controller] Email notification error:", err.message)
+    );
 
     return res.status(201).json({
       success: true,

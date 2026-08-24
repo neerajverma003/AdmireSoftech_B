@@ -5,7 +5,7 @@ const quoteSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "A registered user account is required to submit a quote"],
+      default: null,
       index: true,
     },
     name: {

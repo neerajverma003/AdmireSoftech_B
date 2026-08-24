@@ -1,6 +1,7 @@
 import { Freelance } from "../models/freelance.model.js";
 import { Proposal } from "../models/proposal.model.js";
 import { generateGetSignedUrl } from "../utils/s3Utils.js";
+import { sendFreelanceProposalEmails } from "../services/emailService.js";
 
 
 export const getAllFreelance = async (req, res) => {
@@ -304,6 +305,11 @@ export const submitProposal = async (req, res) => {
 
     // Increment proposals / bidsCount on the gig
     await Freelance.findByIdAndUpdate(gig._id, { $inc: { bidsCount: 1 } });
+
+    // Send confirmation to user & notification to configured admin + universal recipients
+    sendFreelanceProposalEmails({ gig, proposal }).catch((err) =>
+      console.error("[Freelance Controller] Email notification error:", err.message)
+    );
 
     return res.status(201).json({
       success: true,

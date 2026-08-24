@@ -1,6 +1,5 @@
 import { Quote } from "../models/quote.model.js";
-
-
+import { sendQuoteEmails } from "../services/emailService.js";
 
 export const createQuote = async (req, res) => {
   try {
@@ -17,8 +16,8 @@ export const createQuote = async (req, res) => {
       urgency,
     } = req.body;
 
-    const quoteName = name || req.user.name;
-    const quoteEmail = email || req.user.email;
+    const quoteName = name || req.user?.name;
+    const quoteEmail = email || req.user?.email;
 
     if (!quoteName || !quoteEmail || !serviceType || !scope || !timeline) {
       return res.status(400).json({
@@ -28,7 +27,7 @@ export const createQuote = async (req, res) => {
     }
 
     const newQuote = await Quote.create({
-      user: req.user._id,
+      user: req.user?._id || null,
       name: quoteName,
       email: quoteEmail,
       phone: phone || "",
@@ -41,6 +40,11 @@ export const createQuote = async (req, res) => {
       urgency: urgency || "Medium",
       status: "Pending Review",
     });
+
+    // Trigger confirmation email to client & notification to configured admin + universal recipients
+    sendQuoteEmails({ quote: newQuote }).catch((err) =>
+      console.error("[Quote Controller] Email notification error:", err.message)
+    );
 
     return res.status(201).json({
       success: true,

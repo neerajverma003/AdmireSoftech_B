@@ -14,7 +14,8 @@
     "seed:team": "node seedTeam.js",
     "seed:freelance": "node seedFreelance.js",
     "seed:jobs": "node seedJobs.js",
-    "seed:all": "node seed.js && node seedServices.js && node seedTestimonials.js && node seedFaqs.js && node seedTeam.js && node seedFreelance.js && node seedJobs.js"
+    "seed:notifications": "node seedNotifications.js",
+    "seed:all": "node seed.js && node seedServices.js && node seedTestimonials.js && node seedFaqs.js && node seedTeam.js && node seedFreelance.js && node seedJobs.js && node seedNotifications.js"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +31,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.3"
+    "mongoose": "^9.9.3",
+    "nodemailer": "^9.0.5"
   }
 }

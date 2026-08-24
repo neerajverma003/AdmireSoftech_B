@@ -5,6 +5,10 @@ import {
   refreshToken,
   getMe,
   logout,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
+  updateProfile,
 } from "../controller/auth.controller.js";
 import { userAuth, adminAuth } from "../middleware/auth.middleware.js";
 
@@ -17,6 +21,13 @@ router.post("/refresh-token", refreshToken);
 router.post("/refresh", refreshToken);
 router.post("/logout", logout);
 
+// Password Reset via OTP
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-otp", verifyOtp);
+router.post("/reset-password", resetPassword);
+
+// Profile management
+router.put("/profile", userAuth, updateProfile);
 
 router.get("/me", userAuth, getMe);
 

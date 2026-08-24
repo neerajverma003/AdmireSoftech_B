@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model.js";
+import {
+  sendPasswordResetOtpEmail,
+  sendPasswordResetSuccessEmail,
+} from "../services/emailService.js";
 
 
 const cookieOptions = {
@@ -62,6 +66,7 @@ export const signup = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
       accessToken,
       refreshToken,
@@ -103,6 +108,7 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
       accessToken,
       refreshToken,
@@ -151,6 +157,7 @@ export const refreshToken = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     });
   } catch (error) {
@@ -174,4 +181,190 @@ export const logout = async (req, res) => {
     success: true,
     message: "Logged out successfully",
   });
+};
+
+/**
+ * Request Password Reset OTP
+ * POST /api/auth/forgot-password
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Please provide your email address" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: "No account found with this email address" });
+    }
+
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpires = otpExpires;
+    await user.save();
+
+    // Send branded OTP email
+    await sendPasswordResetOtpEmail({
+      email: user.email,
+      name: user.name,
+      otp,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `A 6-digit verification code has been sent to ${user.email}.`,
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ message: "Failed to send reset code. Please try again later." });
+  }
+};
+
+/**
+ * Verify OTP
+ * POST /api/auth/verify-otp
+ */
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp.toString().trim()) {
+      return res.status(400).json({ message: "Invalid verification code. Please check and try again." });
+    }
+
+    if (!user.resetPasswordOtpExpires || new Date() > user.resetPasswordOtpExpires) {
+      return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code verified successfully.",
+    });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    return res.status(500).json({ message: "Verification failed. Please try again." });
+  }
+};
+
+/**
+ * Reset Password with verified OTP
+ * POST /api/auth/reset-password
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "Email, OTP, and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp.toString().trim()) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    if (!user.resetPasswordOtpExpires || new Date() > user.resetPasswordOtpExpires) {
+      return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
+    }
+
+    // Hash and update password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordOtp = null;
+    user.resetPasswordOtpExpires = null;
+    await user.save();
+
+    // Send confirmation email
+    sendPasswordResetSuccessEmail({ email: user.email, name: user.name });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully! You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({ message: "Failed to reset password. Please try again." });
+  }
+};
+
+/**
+ * Update User / Admin Profile (Name, Email, Avatar)
+ * PUT /api/auth/profile
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { name, email, avatar } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (name && name.trim()) {
+      user.name = name.trim();
+    }
+
+    if (email && email.trim()) {
+      const normalizedEmail = email.toLowerCase().trim();
+      if (normalizedEmail !== user.email) {
+        const existing = await User.findOne({
+          email: normalizedEmail,
+          _id: { $ne: user._id },
+        });
+        if (existing) {
+          return res.status(400).json({ message: "This email address is already in use by another account" });
+        }
+        user.email = normalizedEmail;
+      }
+    }
+
+    if (avatar !== undefined) {
+      if (avatar && typeof avatar === "string" && avatar.startsWith("data:")) {
+        return res.status(400).json({
+          message: "Base64 images are not supported. Please upload your photo to AWS S3 or provide an HTTPS image URL.",
+        });
+      }
+      user.avatar = avatar;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Failed to update profile. Please try again." });
+  }
 };

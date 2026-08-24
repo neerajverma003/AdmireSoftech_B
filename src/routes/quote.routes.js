@@ -6,12 +6,12 @@ import {
   updateQuote,
   deleteQuote,
 } from "../controller/quote.controller.js";
-import { userAuth, adminAuth } from "../middleware/auth.middleware.js";
+import { optionalUserAuth, adminAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// User authenticated quote submission
-router.post("/", userAuth, createQuote);
+// Quote submission (supports authenticated users and guest clients)
+router.post("/", optionalUserAuth, createQuote);
 
 // Admin protected quote management
 router.get("/", adminAuth, getAllQuotes);
