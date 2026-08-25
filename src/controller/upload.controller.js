@@ -94,6 +94,15 @@ export const buildCleanS3Key = ({
       return `industries/${industrySlug}/${timestamp}_${cleanFile}`;
     }
 
+    case "case-studies":
+    case "casestudy":
+    case "case-study":
+    case "casestudies": {
+      const categorySlug = sanitizeSlug(category, "general");
+      const titleSlug = sanitizeSlug(folder || candidateName, "project");
+      return `case-studies/${categorySlug}/${titleSlug}/${timestamp}_${cleanFile}`;
+    }
+
     case "assets":
     case "quotes":
     case "documents": {

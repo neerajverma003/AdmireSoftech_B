@@ -15,6 +15,8 @@ import jobRouter from "./routes/job.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
 import settingsRouter from "./routes/settings.routes.js";
 import industryRouter from "./routes/industry.routes.js";
+import caseStudyRouter from "./routes/caseStudy.routes.js";
+import estimatorConfigRouter from "./routes/estimatorConfig.routes.js";
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use("/api/inquiries", inquiryRouter);
 app.use("/api/quotes", quoteRouter);
 app.use("/api/services", serviceRouter);
 app.use("/api/industries", industryRouter);
+app.use("/api/case-studies", caseStudyRouter);
+app.use("/case-studies", caseStudyRouter);
 app.use("/api/testimonials", testimonialRouter);
 app.use("/api/reviews", testimonialRouter);
 app.use("/api/faqs", faqRouter);
@@ -46,5 +50,6 @@ app.use("/api/careers", jobRouter);
 app.use("/api/upload", uploadRoute);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/settings", settingsRouter);
+app.use("/api/estimator-config", estimatorConfigRouter);
 
 export default app;

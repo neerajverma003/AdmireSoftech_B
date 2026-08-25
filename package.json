@@ -6,16 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx nodemon server.js",
+    "start": "node server.js",
     "seed": "node seed.js",
-    "seed:admin": "node seed.js",
-    "seed:services": "node seedServices.js",
-    "seed:testimonials": "node seedTestimonials.js",
-    "seed:faqs": "node seedFaqs.js",
-    "seed:team": "node seedTeam.js",
-    "seed:freelance": "node seedFreelance.js",
-    "seed:jobs": "node seedJobs.js",
-    "seed:notifications": "node seedNotifications.js",
-    "seed:all": "node seed.js && node seedServices.js && node seedTestimonials.js && node seedFaqs.js && node seedTeam.js && node seedFreelance.js && node seedJobs.js && node seedNotifications.js"
+    "seed:admin": "node seed.js"
   },
   "keywords": [],
   "author": "",

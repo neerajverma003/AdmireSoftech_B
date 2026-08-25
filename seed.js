@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+import dotenv from "dotenv";
 import { User } from "./src/models/user.model.js";
 
 dotenv.config();
@@ -14,39 +14,35 @@ const seedAdmin = async () => {
       process.exit(1);
     }
 
-    console.log(" Connecting to MongoDB...");
+    console.log(" Connecting to MongoDB for Admin User Seeding...");
     await mongoose.connect(mongoUri);
     console.log(" MongoDB connected successfully.");
 
-    const adminEmail = (process.env.ADMIN_EMAIL || "mohdkaif8672@gmail.com").toLowerCase();
+    const adminEmail = process.env.ADMIN_EMAIL || "test123@gmail.com";
     const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
     const adminName = process.env.ADMIN_NAME || "Super Admin";
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(adminPassword, salt);
 
     const existingAdmin = await User.findOne({ email: adminEmail });
 
     if (existingAdmin) {
-      console.log(` Admin user already exists with email: ${adminEmail}`);
-      if (existingAdmin.role !== "admin") {
-        existingAdmin.role = "admin";
-        await existingAdmin.save();
-        console.log("👑 Updated user role to 'admin'.");
-      }
+      console.log(` Admin user (${adminEmail}) already exists. Updating password & role...`);
+      existingAdmin.name = adminName;
+      existingAdmin.password = hashedPassword;
+      existingAdmin.role = "admin";
+      await existingAdmin.save();
+      console.log(" Admin user credentials updated successfully.");
     } else {
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      const newAdmin = await User.create({
+      console.log(` Creating new Admin user (${adminEmail})...`);
+      await User.create({
         name: adminName,
         email: adminEmail,
         password: hashedPassword,
         role: "admin",
       });
-
-      console.log(" Admin user created successfully!");
-      console.log("-----------------------------------------");
-      console.log(` Name:     ${newAdmin.name}`);
-      console.log(` Email:    ${newAdmin.email}`);
-      console.log(` Password: ${adminPassword}`);
-      console.log(` Role:     ${newAdmin.role}`);
-      console.log("-----------------------------------------");
+      console.log(" Admin user created successfully.");
     }
 
     console.log(" Admin seeding completed.");
