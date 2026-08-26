@@ -1,50 +1,63 @@
 name: Deploy AdmireSoftech Backend
 
-on:
-  push:
-    branches:
-      - main
 
-permissions:
-  contents: read
+on:
+    push:
+        branches:
+            - main
+
 
 jobs:
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
+    deploy:
+        name: Deploy to Production
+        runs-on: ubuntu-latest
 
-    steps:
-      # Checkout the repository
-      - name: Checkout code
-        uses: actions/checkout@v4
+        steps:
+            # Checkout the repository
+            - name: Checkout code
+              uses: actions/checkout@v4
+            
 
-      # Deploy to production
-      - name: Deploy to Production
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
+            # Set up Node.js
+            - name: setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                 node-version: '22'
+                 cache: 'npm'
 
-            echo "Starting deployment..."
+            
+            # Install dependencies
+            - name: insatall dependencies
+              run: npm ci
 
-            cd /home/ubuntu/AdmireSoftech_B
 
-            echo "Pulling latest changes from the repository..."
-            git fetch origin main
+             # deploy to production
+            - name: Deploy to Production
+              uses: appleboy/ssh-action@v1.2.2
+              with:
+                 host: ${{ secrets.EC2_HOST}}
+                 username: ${{ secrets.EC2_USERNAME}}
+                 key: ${{ secrets.EC2_SSH_KEY}}
+                 script: |
+                    set -e
 
-            echo "Resetting working directory to match the latest commit..."
-            git reset --hard origin/main
+                    echo "start deployment..."
 
-            echo "Installing production dependencies..."
-            npm ci --omit=dev
+                    cd /home/ubuntu/AdmireSoftech_B
 
-            echo "Reloading the PM2 process..."
-            pm2 reload api.as
+                    echo "Pulling latest changes from the repository..."
+                    git fetch origin main
 
-            echo "Checking the status of the PM2 process..."
-            pm2 status api.as
+                    echo "resetting working directory to match the latest commit..."
+                    git reset --hard origin/main
 
-            echo "Deployment completed successfully!"
+                    echo "Installing dependencies..."
+                    npm ci --omit=dev
+
+                    echo "reloading the pm2 process..."
+                    pm2 reload api.as
+
+                    echo "checking the status of the pm2 process...
+                    pm2 status api.as"
+
+                    echo "Deployment completed successfully!"
