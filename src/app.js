@@ -17,6 +17,7 @@ import settingsRouter from "./routes/settings.routes.js";
 import industryRouter from "./routes/industry.routes.js";
 import caseStudyRouter from "./routes/caseStudy.routes.js";
 import estimatorConfigRouter from "./routes/estimatorConfig.routes.js";
+import outreachRouter from "./routes/outreach.routes.js";
 
 const app = express();
 
@@ -51,5 +52,6 @@ app.use("/api/upload", uploadRoute);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/estimator-config", estimatorConfigRouter);
+app.use("/api/outreach", outreachRouter);
 
 export default app;

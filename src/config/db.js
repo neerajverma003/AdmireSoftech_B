@@ -4,11 +4,13 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected successfully ');
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log(`MongoDB connected successfully: ${conn.connection.host}`);
   } catch (error) {
-    console.log(error);
-    process.exit(1);
+    console.error('MongoDB Connection Error:', error.message);
+    console.log(' Please ensure your current IP is whitelisted in MongoDB Atlas Network Access.');
   }
 };
 export default connectDB;

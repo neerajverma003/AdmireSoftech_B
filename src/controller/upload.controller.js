@@ -103,6 +103,14 @@ export const buildCleanS3Key = ({
       return `case-studies/${categorySlug}/${titleSlug}/${timestamp}_${cleanFile}`;
     }
 
+    case "emails":
+    case "email":
+    case "outreach": {
+      const campaignSlug = sanitizeSlug(category || folder, "general");
+      const senderSlug = sanitizeEmailSlug(email || candidateName, "admin");
+      return `emails/outreach/${campaignSlug}/${senderSlug}/${timestamp}_${cleanFile}`;
+    }
+
     case "assets":
     case "quotes":
     case "documents": {
