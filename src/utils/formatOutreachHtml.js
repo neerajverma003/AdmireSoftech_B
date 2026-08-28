@@ -6,7 +6,7 @@ const cleanHtmlStyles = (htmlContent) => {
     .replace(/background-color\s*:\s*[^;"]+;?/gi, "")
     .replace(/background\s*:\s*[^;"]+;?/gi, "")
     .replace(
-      /color\s*:\s*(#fff|#ffffff|white|#cbd5e1|#94a3b8|#e2e8f0|rgb\(255,\s*255,\s*255\)|rgba\(255,\s*255,\s*255,[^)]+\));?/gi,
+      /color\s*:\s*(#fff|#ffffff|white|#cbd5e1|#94a3b8|#e2e8f0|#f1f5f9|#f8fafc|rgb\(255,\s*255,\s*255\)|rgba\(255,\s*255,\s*255,[^)]+\));?/gi,
       ""
     );
 };
@@ -24,30 +24,60 @@ const getPreviewSnippet = (htmlContent) => {
 
 /**
  * 1. Normal (Plain / Direct) Email Format
- * Direct 1-on-1 style email without logo header banner, card wrappers, or corporate card boxes.
- * Looks natural, personal, and achieves high inbox deliverability & open rates.
+ * Standard direct 1-on-1 email format: clean left-aligned text exactly as typed.
+ * No centered containers, no cards, no unexpected line breaking.
  */
 export const formatNormalOutreachHtml = ({ htmlContent, subject, fromName }) => {
   const cleanedContent = cleanHtmlStyles(htmlContent);
   const previewSnippet = getPreviewSnippet(htmlContent);
 
-  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="color-scheme" content="light"/>
-  <meta name="supported-color-schemes" content="light"/>
   <title>${subject || "Message"}</title>
+  <style type="text/css">
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #222222;
+      background-color: #ffffff;
+      text-align: left;
+    }
+    div, p, span, td, th {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #222222;
+    }
+    p {
+      margin: 0 0 12px 0;
+    }
+    a {
+      color: #1a73e8;
+      text-decoration: underline;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 20px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #1e293b; background-color: #ffffff;">
+<body style="margin: 0; padding: 12px 8px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222; background-color: #ffffff; text-align: left;">
   <!-- Invisible Preheader Preview Text -->
   <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all; font-size: 1px; line-height: 1px; opacity: 0;">
     ${previewSnippet} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
   </div>
 
-  <!-- Direct Clean Content Container -->
-  <div style="max-width: 680px; margin: 0 auto; color: #1e293b; font-size: 15px; line-height: 1.65; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <!-- Direct Clean Content (Natural Left-Aligned Flow, No Centering) -->
+  <div dir="ltr" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222; text-align: left; margin: 0; padding: 0;">
     ${cleanedContent}
   </div>
 </body>

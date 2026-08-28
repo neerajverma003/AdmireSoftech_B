@@ -1,5 +1,6 @@
 import "dotenv/config";
 import OutreachEmail from "../models/outreachEmail.model.js";
+import OutreachDraft from "../models/outreachDraft.model.js";
 import { formatOutreachHtml } from "../utils/formatOutreachHtml.js";
 import {
   resolveTransporterForEmail,
@@ -14,12 +15,35 @@ export const getDefaultSenderEmail = () => {
 };
 
 /**
+ * Converts HTML message body to clean, readable plain text preserving line breaks
+ */
+export const convertHtmlToPlainText = (html) => {
+  if (!html) return "";
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*[\/]?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n/g, "\n\n")
+    .trim();
+};
+
+/**
  * Controller: Send Direct Outreach Email (Gmail Style)
  * POST /api/outreach/send
  */
 export const sendOutreachEmail = async (req, res) => {
   try {
     const {
+      draftId,
       to,
       cc,
       bcc,
@@ -153,11 +177,7 @@ export const sendOutreachEmail = async (req, res) => {
     });
 
     // Extract clean plain text for multipart/alternative anti-spam compliance
-    const plainText = (htmlContent || "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const plainText = convertHtmlToPlainText(htmlContent);
 
     const mailOptions = {
       from: fromHeader,
@@ -209,6 +229,15 @@ export const sendOutreachEmail = async (req, res) => {
         message: `Failed to send email: ${errorMessage}`,
         record: outreachRecord,
       });
+    }
+
+    // Auto-remove active draft if email was sent from a saved draft
+    if (draftId) {
+      try {
+        await OutreachDraft.findByIdAndDelete(draftId);
+      } catch (draftErr) {
+        console.warn("[OutreachController.sendOutreachEmail] Non-fatal draft cleanup error:", draftErr.message);
+      }
     }
 
     return res.status(200).json({
@@ -296,3 +325,133 @@ export const deleteOutreachLog = async (req, res) => {
     });
   }
 };
+
+/**
+ * Controller: Save / Update Draft Email
+ * POST /api/outreach/drafts
+ */
+export const saveOutreachDraft = async (req, res) => {
+  try {
+    const {
+      draftId,
+      to,
+      cc,
+      bcc,
+      fromName,
+      fromEmail,
+      subject,
+      htmlContent,
+      emailFormat = "normal",
+      attachments = [],
+    } = req.body;
+
+    const toRecipients = Array.isArray(to)
+      ? to.map((e) => e.trim()).filter(Boolean)
+      : typeof to === "string" && to.trim()
+        ? to.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean)
+        : [];
+
+    const ccRecipients = Array.isArray(cc)
+      ? cc.map((e) => e.trim()).filter(Boolean)
+      : typeof cc === "string" && cc.trim()
+        ? cc.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean)
+        : [];
+
+    const bccRecipients = Array.isArray(bcc)
+      ? bcc.map((e) => e.trim()).filter(Boolean)
+      : typeof bcc === "string" && bcc.trim()
+        ? bcc.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean)
+        : [];
+
+    const draftData = {
+      to: toRecipients,
+      cc: ccRecipients,
+      bcc: bccRecipients,
+      fromName: (fromName || "Admire Softech").trim(),
+      fromEmail: (fromEmail || "").trim(),
+      subject: (subject || "").trim(),
+      htmlContent: htmlContent || "",
+      emailFormat: emailFormat === "template" ? "template" : "normal",
+      attachments: Array.isArray(attachments) ? attachments : [],
+    };
+
+    let draft;
+    if (draftId) {
+      draft = await OutreachDraft.findByIdAndUpdate(draftId, draftData, {
+        new: true,
+        runValidators: true,
+      });
+    }
+
+    if (!draft) {
+      draft = await OutreachDraft.create(draftData);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Draft saved successfully.",
+      draft,
+    });
+  } catch (error) {
+    console.error("[OutreachController.saveOutreachDraft] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save draft.",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Controller: Get All Saved Drafts
+ * GET /api/outreach/drafts
+ */
+export const getOutreachDrafts = async (req, res) => {
+  try {
+    const drafts = await OutreachDraft.find().sort({ updatedAt: -1 }).lean();
+    return res.status(200).json({
+      success: true,
+      count: drafts.length,
+      drafts,
+    });
+  } catch (error) {
+    console.error("[OutreachController.getOutreachDrafts] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch drafts.",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Controller: Delete a Draft
+ * DELETE /api/outreach/drafts/:id
+ */
+export const deleteOutreachDraft = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await OutreachDraft.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Draft not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Draft deleted successfully.",
+      id,
+    });
+  } catch (error) {
+    console.error("[OutreachController.deleteOutreachDraft] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete draft.",
+      error: error.message,
+    });
+  }
+};
+

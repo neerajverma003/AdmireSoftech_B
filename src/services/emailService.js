@@ -2,7 +2,12 @@ import { transporter } from "../lib/nodemailer.js";
 import { NotificationRecipient } from "../models/notificationRecipient.model.js";
 
 const getFromHeader = () => {
-  const senderEmail = (process.env.EMAIL_USER || process.env.EMAIL || "notifications@admiresoftech.com")?.trim();
+  const senderEmail = (
+    process.env.SUPPORT_EMAIL_USER ||
+    process.env.EMAIL_USER ||
+    process.env.EMAIL ||
+    "support@admiresoftech.com"
+  )?.trim();
   const senderName = "Admire Softech";
   return `"${senderName}" <${senderEmail}>`;
 };
@@ -157,12 +162,20 @@ const sendMailSafe = async ({ to, subject, html, text }) => {
   }
 
   const recipientList = Array.isArray(to) ? to.join(", ") : to;
-  const emailUser = (process.env.EMAIL_USER || process.env.EMAIL)?.trim();
-  const emailPass = process.env.SUPPORT_EMAIL_USER?.trim();
+  const emailUser = (
+    process.env.SUPPORT_EMAIL_USER ||
+    process.env.EMAIL_USER ||
+    process.env.EMAIL
+  )?.trim();
+  const emailPass = (
+    process.env.SUPPORT_EMAIL_PASS ||
+    process.env.EMAIL_PASS ||
+    process.env.EMAIL_PASSWORD
+  )?.trim();
 
   if (!emailUser || !emailPass) {
     console.error(
-      `\n⚠️ [EmailService ERROR] Cannot send email to [${recipientList}]: EMAIL_USER and/or SUPPORT_EMAIL_USER are not configured in AdmireSoftech_B/.env!\n`
+      `\n⚠️ [EmailService ERROR] Cannot send email to [${recipientList}]: SMTP credentials (SUPPORT_EMAIL_USER / SUPPORT_EMAIL_PASS) are not configured in AdmireSoftech_B/.env!\n`
     );
     return false;
   }
@@ -210,7 +223,7 @@ export const sendContactEmails = async ({ inquiry }) => {
       `,
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: email,
       subject: "Thank You for Contacting Admire Softech - We Received Your Inquiry",
       html: userHtml,
@@ -241,9 +254,9 @@ export const sendContactEmails = async ({ inquiry }) => {
       ctaLink: "http://localhost:5174/inquiries",
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: adminRecipients,
-      subject: `[New Contact Lead] ${clientName} - ${service || "General Inquiry"}`,
+      subject: `New Contact ${clientName} - ${service || "General Inquiry"}`,
       html: adminHtml,
     });
   }
@@ -276,7 +289,7 @@ export const sendQuoteEmails = async ({ quote }) => {
       `,
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: email,
       subject: `Quote Request Confirmed: ${serviceType} - Admire Softech`,
       html: userHtml,
@@ -309,7 +322,7 @@ export const sendQuoteEmails = async ({ quote }) => {
       ctaLink: "http://localhost:5174/quotes",
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: adminRecipients,
       subject: `[New Quick Quote] ${clientName} - ${serviceType} (${urgency || "Normal"})`,
       html: adminHtml,
@@ -344,7 +357,7 @@ export const sendFreelanceProposalEmails = async ({ gig, proposal }) => {
       `,
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: email,
       subject: `Proposal Received: ${gigTitle} - Admire Softech`,
       html: userHtml,
@@ -376,7 +389,7 @@ export const sendFreelanceProposalEmails = async ({ gig, proposal }) => {
       ctaLink: "http://localhost:5174/freelance",
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: adminRecipients,
       subject: `[New Freelance Proposal] ${fullName} - ${gigTitle}`,
       html: adminHtml,
@@ -410,7 +423,7 @@ export const sendJobApplicationEmails = async ({ job, applicant }) => {
       `,
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: email,
       subject: `Application Received: ${jobTitle} - Admire Softech`,
       html: userHtml,
@@ -443,9 +456,9 @@ export const sendJobApplicationEmails = async ({ job, applicant }) => {
       ctaLink: "http://localhost:5174/careers",
     });
 
-    sendMailSafe({
+    await sendMailSafe({
       to: adminRecipients,
-      subject: `[New Candidate] ${fullName} - ${jobTitle}`,
+      subject: `Candidate ${fullName} - ${jobTitle}`,
       html: adminHtml,
     });
   }
