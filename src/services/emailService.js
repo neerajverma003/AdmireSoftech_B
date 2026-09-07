@@ -168,7 +168,7 @@ const renderEmailLayout = ({ title, preheader, bodyContent, ctaText, ctaLink }) 
 /**
  * Generic Mail Sender with Error Catching & credential validation
  */
-const sendMailSafe = async ({ to, subject, html, text }) => {
+const sendMailSafe = async ({ to, subject, html, text, replyTo }) => {
   if (!to || (Array.isArray(to) && to.length === 0)) {
     return false;
   }
@@ -194,13 +194,17 @@ const sendMailSafe = async ({ to, subject, html, text }) => {
 
   try {
     const from = getFromHeader();
-    const info = await transporter.sendMail({
+    const mailOptions = {
       from,
       to: recipientList,
       subject,
       text: text || subject,
       html,
-    });
+    };
+    if (replyTo) {
+      mailOptions.replyTo = replyTo;
+    }
+    const info = await transporter.sendMail(mailOptions);
     console.log(`[EmailService] Email sent successfully to [${recipientList}] - MessageId: ${info.messageId}`);
     return true;
   } catch (error) {
@@ -545,5 +549,130 @@ export const sendPasswordResetSuccessEmail = async ({ email, name }) => {
     html: simpleHtml,
     text: plainText,
   });
+};
+
+// =========================================================================
+// CHATBOT LEADS EMAIL NOTIFICATION
+// =========================================================================
+export const sendChatbotLeadEmail = async ({ lead }) => {
+  const leadObj = lead?.toObject ? lead.toObject() : (lead || {});
+  let { fullName, name, email, phone, service, projectType, features, budget, notes } = leadObj;
+  const clientName = (fullName || name || "Valued Client").trim();
+  
+  let userEmail = (email || "").trim().toLowerCase();
+  if (userEmail.endsWith(".acin")) userEmail = userEmail.replace(/\.acin$/, ".ac.in");
+  if (userEmail.endsWith(".coin")) userEmail = userEmail.replace(/\.coin$/, ".co.in");
+  if (userEmail.endsWith(".eduin")) userEmail = userEmail.replace(/\.eduin$/, ".edu.in");
+  if (userEmail.endsWith(".govin")) userEmail = userEmail.replace(/\.govin$/, ".gov.in");
+
+  const serviceName = service || "Website Development";
+  const projectTypeName = projectType || "Custom Project";
+  const budgetStr = budget || "Flexible";
+  const featureListStr = Array.isArray(features) && features.length > 0 ? features.join(", ") : "Standard Features";
+  const notesStr = notes || "None provided";
+
+  // A. User Confirmation Email Task
+  const userConfirmationTask = async () => {
+    if (!userEmail) {
+      console.warn("[EmailService] No user email provided for chatbot lead confirmation.");
+      return false;
+    }
+
+    const fields = [
+      { label: "Requested Service", value: serviceName },
+      { label: "Project Category", value: projectTypeName },
+      { label: "Selected Features", value: featureListStr },
+      { label: "Estimated Budget", value: budgetStr },
+      { label: "Client Notes", value: notesStr },
+    ];
+
+    const userHtml = renderEmailLayout({
+      title: "We Received Your Project Requirements",
+      preheader: `Thank you ${clientName}, our engineering architects are reviewing your ${serviceName} requirements.`,
+      bodyContent: `
+        <p style="margin: 0 0 14px 0; color: #334155; font-size: 15px;">Hello <strong>${clientName}</strong>,</p>
+        <p style="margin: 0 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+          Thank you for contacting <strong>Admire Softech</strong> via our AI Assistant. We have safely received your project specifications for <strong>${serviceName}</strong> (${projectTypeName}) and our solutions engineering team will reach out within 24 hours.
+        </p>
+        ${renderFieldTable(fields)}
+        <div style="margin-top: 20px; padding: 14px 16px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 13px;">
+          <strong>What happens next?</strong> Our technical lead will review your requested features and reach out with an estimated scope, technology stack recommendation, and timeline.
+        </div>
+        <p style="margin: 18px 0 0 0; color: #64748b; font-size: 13px;">
+          Need immediate assistance? Feel free to reply directly to this email or connect with us on WhatsApp at <strong>+91 85878 85359</strong>.
+        </p>
+      `,
+    });
+
+    const userPlainText = `Hello ${clientName},\n\nThank you for contacting Admire Softech via our AI Assistant. We have safely received your project specifications for ${serviceName} (${projectTypeName}) and our engineering architects will reach out within 24 hours.\n\nProject Summary:\n- Requested Service: ${serviceName}\n- Project Category: ${projectTypeName}\n- Selected Features: ${featureListStr}\n- Estimated Budget: ${budgetStr}\n- Notes: ${notesStr}\n\nWhat happens next?\nOur technical lead will review your requested features and reach out with an estimated scope, technology stack recommendation, and timeline.\n\nNeed immediate assistance? Reply directly to this email or connect on WhatsApp (+91 85878 85359).\n\nBest regards,\nAdmire Softech Solution Pvt. Ltd\nhttps://admiresoftech.com`;
+
+    console.log(`[EmailService] Dispatching user confirmation email to [${userEmail}]...`);
+    const sent = await sendMailSafe({
+      to: userEmail,
+      subject: `Project Inquiry Received: ${serviceName} - Admire Softech`,
+      html: userHtml,
+      text: userPlainText,
+    });
+
+    if (sent) {
+      console.log(`[EmailService] User confirmation email successfully delivered to [${userEmail}]`);
+    } else {
+      console.error(`[EmailService] Failed delivering user confirmation email to [${userEmail}]`);
+    }
+    return sent;
+  };
+
+  // B. Admin & Universal Notification Task
+  const adminNotificationTask = async () => {
+    const adminRecipients = await getActiveRecipientsForModule("CONTACT");
+    if (adminRecipients.length === 0) {
+      console.log("[EmailService] No active admin/universal recipients configured for module CONTACT.");
+      return false;
+    }
+
+    const fields = [
+      { label: "Lead Source", value: "<span style='display:inline-block;background-color:#06b6d4;color:#070c1e;font-weight:bold;padding:2px 8px;border-radius:4px;font-size:11px;'>🤖 AI CHATBOT</span>" },
+      { label: "Client Name", value: `<strong>${clientName}</strong>` },
+      { label: "Email Address", value: `<a href="mailto:${userEmail}" style="color: #0284c7; text-decoration: underline; font-weight: 600;">${userEmail}</a>` },
+      { label: "Phone Number", value: `<a href="tel:${phone}" style="color: #0284c7; text-decoration: underline; font-weight: 600;">${phone}</a>` },
+      { label: "Selected Service", value: `<strong>${serviceName}</strong>` },
+      { label: "Project Category", value: projectTypeName },
+      { label: "Selected Features", value: featureListStr },
+      { label: "Budget Range", value: `<strong>${budgetStr}</strong>` },
+      { label: "Client Notes", value: notesStr },
+    ];
+
+    const adminHtml = renderEmailLayout({
+      title: "New AI Chatbot Lead Captured",
+      preheader: `[Chatbot Lead] ${clientName} - ${serviceName} (${projectTypeName})`,
+      bodyContent: `
+        <p style="margin: 0 0 14px 0; color: #334155;">A new high-intent prospective client has submitted their requirements through the AI Chatbot:</p>
+        ${renderFieldTable(fields)}
+      `,
+      ctaText: "Open Admin Leads",
+      ctaLink: "http://localhost:5174/inquiries",
+    });
+
+    const adminPlainText = `New AI Chatbot Lead Captured:\n\n- Client Name: ${clientName}\n- Email: ${userEmail}\n- Phone: ${phone}\n- Service: ${serviceName}\n- Project Category: ${projectTypeName}\n- Selected Features: ${featureListStr}\n- Budget: ${budgetStr}\n- Notes: ${notesStr}\n\nView details: http://localhost:5174/inquiries`;
+
+    console.log(`[EmailService] Dispatching admin notification to [${adminRecipients.join(", ")}]...`);
+    const sent = await sendMailSafe({
+      to: adminRecipients,
+      replyTo: userEmail || undefined,
+      subject: `[Chatbot Lead] ${clientName} - ${serviceName} (${budgetStr})`,
+      html: adminHtml,
+      text: adminPlainText,
+    });
+
+    if (sent) {
+      console.log(`[EmailService] Admin notification successfully delivered to [${adminRecipients.join(", ")}]`);
+    } else {
+      console.error(`[EmailService] Failed delivering admin notification to [${adminRecipients.join(", ")}]`);
+    }
+    return sent;
+  };
+
+  // Run both concurrently so neither blocks or delays the other
+  return Promise.allSettled([userConfirmationTask(), adminNotificationTask()]);
 };
 

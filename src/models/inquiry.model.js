@@ -68,6 +68,20 @@ const inquirySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    source: {
+      type: String,
+      default: "Website",
+      trim: true,
+    },
+    projectType: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    features: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

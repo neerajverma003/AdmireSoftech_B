@@ -34,6 +34,11 @@ const settingsSchema = new mongoose.Schema(
             default: "+91 98765 43210",
             trim: true,
         },
+        whatsappPrefillText: {
+            type: String,
+            default: "Hello Admire Softech, I am interested in discussing an IT project!",
+            trim: true,
+        },
         headquarters: {
             type: String,
             default: "Sector 62, Noida, NCR, India",

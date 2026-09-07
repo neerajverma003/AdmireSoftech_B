@@ -38,6 +38,7 @@ export const updateSettings = async (req, res) => {
             supportEmail,
             contactPhone,
             whatsappNumber,
+            whatsappPrefillText,
             headquarters,
             workingHours,
             websiteUrl,
@@ -58,6 +59,7 @@ export const updateSettings = async (req, res) => {
         if (supportEmail !== undefined) settings.supportEmail = supportEmail;
         if (contactPhone !== undefined) settings.contactPhone = contactPhone;
         if (whatsappNumber !== undefined) settings.whatsappNumber = whatsappNumber;
+        if (whatsappPrefillText !== undefined) settings.whatsappPrefillText = whatsappPrefillText;
         if (headquarters !== undefined) settings.headquarters = headquarters;
         if (workingHours !== undefined) settings.workingHours = workingHours;
         if (websiteUrl !== undefined) settings.websiteUrl = websiteUrl;
