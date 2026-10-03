@@ -8,8 +8,12 @@ import {
 } from "../controller/inquiry.controller.js";
 import { adminAuth } from "../middleware/auth.middleware.js";
 
+import { getCaptchaChallenge } from "../controller/captcha.controller.js";
+
 const router = express.Router();
 
+// Public security CAPTCHA generator for inquiries
+router.get("/captcha", getCaptchaChallenge);
 
 router.post("/", createInquiry);
 

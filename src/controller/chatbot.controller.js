@@ -2,6 +2,7 @@ import { ChatbotSettings } from "../models/chatbotSettings.model.js";
 import { ChatbotLead } from "../models/chatbotLead.model.js";
 import { Inquiry } from "../models/inquiry.model.js";
 import { sendChatbotLeadEmail } from "../services/emailService.js";
+import { verifyCaptcha } from "../services/captchaService.js";
 
 /**
  * @desc Get live chatbot settings (prompts, options, budgets)
@@ -83,7 +84,21 @@ export const submitChatbotLead = async (req, res) => {
       features,
       budget,
       notes,
+      captchaToken,
+      captchaAnswer,
+      hp_field,
     } = req.body;
+
+    if (captchaToken || captchaAnswer || hp_field) {
+      const captchaResult = verifyCaptcha(captchaToken, captchaAnswer, hp_field);
+      if (!captchaResult.isValid) {
+        return res.status(400).json({
+          success: false,
+          isCaptchaError: true,
+          message: captchaResult.message || "Invalid or expired security verification code.",
+        });
+      }
+    }
 
     const contactName = (fullName || name || "").trim();
 

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Inquiry } from "../models/inquiry.model.js";
 import { sendContactEmails } from "../services/emailService.js";
+import { verifyCaptcha } from "../services/captchaService.js";
 
 // Helper to extract user ID if authenticated
 const getOptionalUserId = (req) => {
@@ -35,7 +36,20 @@ export const createInquiry = async (req, res) => {
       message,
       priority,
       notes,
+      captchaToken,
+      captchaAnswer,
+      hp_field,
     } = req.body;
+
+    // Verify security CAPTCHA
+    const captchaResult = verifyCaptcha(captchaToken, captchaAnswer, hp_field);
+    if (!captchaResult.isValid) {
+      return res.status(400).json({
+        success: false,
+        isCaptchaError: true,
+        message: captchaResult.message || "Invalid or expired security verification code.",
+      });
+    }
 
     const contactName = fullName || name;
 
