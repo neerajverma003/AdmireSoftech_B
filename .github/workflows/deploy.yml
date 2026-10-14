@@ -43,6 +43,13 @@ jobs:
 
                     echo "start deployment..."
 
+                    # Load NVM and shell environment in non-interactive session
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+                    [ -s "$HOME/.profile" ] && \. "$HOME/.profile"
+                    [ -s "$HOME/.bashrc" ] && \. "$HOME/.bashrc"
+                    export PATH="$PATH:/usr/local/bin:/usr/bin"
+
                     cd /home/ubuntu/AdmireSoftech_B
 
                     echo "Pulling latest changes from the repository..."
@@ -52,12 +59,12 @@ jobs:
                     git reset --hard origin/main
 
                     echo "Installing dependencies..."
-                    npm ci --omit=dev
+                    npm ci --omit=dev || npm install --omit=dev
 
                     echo "reloading the pm2 process..."
-                    pm2 reload api.as
+                    pm2 reload api.as || pm2 restart api.as || pm2 start server.js --name api.as
 
-                    echo "checking the status of the pm2 process...
-                    pm2 status api.as"
+                    echo "checking the status of the pm2 process..."
+                    pm2 status api.as || pm2 status
 
                     echo "Deployment completed successfully!"

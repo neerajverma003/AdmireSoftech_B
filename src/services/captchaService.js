@@ -7,9 +7,12 @@ const TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const usedNonces = new Set();
 
 // Clean up expired nonces every 15 minutes to prevent memory leaks
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   usedNonces.clear();
 }, 15 * 60 * 1000);
+if (cleanupTimer && cleanupTimer.unref) {
+  cleanupTimer.unref();
+}
 
 // Character sets for CAPTCHA
 // Uppercase characters (avoiding easily confused glyphs like 0/O, 1/I)
@@ -160,6 +163,38 @@ export const verifyCaptcha = (captchaToken, userAnswer, honeypot) => {
   }
 
   const parts = captchaToken.split(".");
+
+  // Support client-side fallback challenge format: fb.<encodedPayload>.<clientHash>
+  if (parts.length === 3 && (parts[0] === "fb" || parts[0] === "fallback")) {
+    const [, encodedPayload] = parts;
+    try {
+      const payload = Buffer.from(encodedPayload, "base64url").toString("utf8");
+      const [expectedAnswer, expiresAtStr, nonce] = payload.split(":");
+
+      const expiresAt = parseInt(expiresAtStr, 10);
+      if (Date.now() > expiresAt) {
+        return { isValid: false, message: "Security code expired. Please click refresh and try again." };
+      }
+
+      if (usedNonces.has(nonce)) {
+        return { isValid: false, message: "Security code has already been used. Please refresh." };
+      }
+
+      const normalizedUser = userAnswer.trim();
+      if (normalizedUser.toLowerCase() !== expectedAnswer.toLowerCase()) {
+        return {
+          isValid: false,
+          message: "Security code does not match. Please enter the exact characters as shown.",
+        };
+      }
+
+      usedNonces.add(nonce);
+      return { isValid: true };
+    } catch {
+      return { isValid: false, message: "Invalid fallback verification token." };
+    }
+  }
+
   if (parts.length !== 2) {
     return { isValid: false, message: "Invalid verification token format." };
   }
@@ -193,12 +228,12 @@ export const verifyCaptcha = (captchaToken, userAnswer, honeypot) => {
     return { isValid: false, message: "Security code has already been used. Please refresh." };
   }
 
-  // 5. Strict case-sensitive answer matching: User must enter exact characters including matching case
+  // 5. Case-insensitive user answer matching for superior user experience
   const normalizedUser = userAnswer.trim();
-  if (normalizedUser !== expectedAnswer) {
+  if (normalizedUser.toLowerCase() !== expectedAnswer.toLowerCase()) {
     return {
       isValid: false,
-      message: "Security code does not match. Please enter the exact characters as shown (case-sensitive).",
+      message: "Security code does not match. Please enter the exact characters as shown.",
     };
   }
 
